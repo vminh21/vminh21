@@ -34,7 +34,7 @@ I'm a **Full Stack & AI Alchemist** 🧙‍♂️ turning caffeine and lines of 
 ## 🐍 My Contributions
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/vminh21/Git/output/github-contribution-grid-snake.svg" alt="Snake animation contribution graph" />
+  <img src="https://raw.githubusercontent.com/vminh21/vminh21/output/github-contribution-grid-snake.svg" alt="Snake animation contribution graph" />
 </p>
 
 ## 📚 Language and Tools
