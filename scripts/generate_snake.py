@@ -7,14 +7,14 @@ import random
 from pathlib import Path
 
 TEXT = "CLAUDE"
-COLS, ROWS = 70, 9
+COLS, ROWS = 58, 7
 CELL, GAP = 11, 4
 PITCH = CELL + GAP
 PAD = 6
-STEP = 0.055  # seconds per cell
-SNAKE_LEN = 6
+MARGIN = 12
+STEP = 0.06  # seconds per cell
+SNAKE_LEN = 5
 REST_STEPS = 40  # pause with full grid before snake enters
-ICON_W = 12  # left margin
 
 FONT = {
     "C": ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
@@ -25,44 +25,19 @@ FONT = {
     "E": ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
 }
 
-# Pixel starburst (original, not the official logo): X ray, C core
-SPARK = [
-    "....X....",
-    ".X..X..X.",
-    "..X.X.X..",
-    "...CCC...",
-    "XXXCCCXXX",
-    "...CCC...",
-    "..X.X.X..",
-    ".X..X..X.",
-    "....X....",
-]
-SPARK_COLORS = {"X": "#d97757", "C": "#f0a07f"}
-
-# Builder critter: Y hat, H hat brim, O body, K eye, W smile,
-# G wrench, S screwdriver shaft, P screwdriver handle.
+# Pixel critter: O body, K eye, A left arm, B right arm, L left legs, R right legs.
 MASCOT = [
-    "......YYY........",
-    ".....YYYYY.....S.",
-    "G.G.HHHHHHHHH..S.",
-    "GGG.OOOOOOOOO..S.",
-    ".G..OOKOOOKOO.PPP",
-    ".G..OOOWWWOOO..P.",
-    ".GOOOOOOOOOOOOOP.",
-    ".G..OOOOOOOOO.PPP",
-    "....O.O...O.O....",
+    "..OOOOOOOOOO..",
+    "..OKOOOOOOKO..",
+    "..OKOOOOOOKO..",
+    "AAOOOOOOOOOOBB",
+    "AAOOOOOOOOOOBB",
+    "..OOOOOOOOOO..",
+    "..L.L....R.R..",
 ]
-MASCOT_COLORS = {
-    "Y": "#f2cf4a",
-    "H": "#d9ae2b",
-    "O": "#d97757",
-    "K": "#1f1e1d",
-    "W": "#ffffff",
-    "G": "#7d8b99",
-    "S": "#a7b1bc",
-    "P": "#5b3fd1",
-}
-PART = {"G": "wrench", "S": "driver", "P": "driver", "K": "eyes"}  # everything else: body
+BODY_COLOR = "#d97757"
+EYE_COLOR = "#1f1e1d"
+PART = {"K": "eyes", "A": "larm", "B": "rarm", "L": "lleg", "R": "rleg"}  # else: body
 
 THEMES = {
     "light": {
@@ -79,32 +54,25 @@ THEMES = {
 
 
 def layout(t):
-    """Return {part: {(x, y): color}} for spark, text and mascot cells inside the grid."""
+    """Return {part: {(x, y): color}} for text and mascot cells inside the grid."""
     text_w = len(TEXT) * 6 - 1
     m_w = len(MASCOT[0])
-    s_w = len(SPARK[0])
     rng = random.Random(21)
-    parts = {"spark": {}, "txt": {}, "body": {}, "eyes": {}, "wrench": {}, "driver": {}}
+    parts = {"txt": {}, "body": {}, "eyes": {}, "larm": {}, "rarm": {}, "lleg": {}, "rleg": {}}
 
-    sx0 = (COLS - (s_w + 3 + text_w + 3 + m_w)) // 2
-    sy0 = (ROWS - len(SPARK)) // 2
-    for r, row in enumerate(SPARK):
-        for c, v in enumerate(row):
-            if v != ".":
-                parts["spark"][(sx0 + c, sy0 + r)] = SPARK_COLORS[v]
-
-    x0, y0 = sx0 + s_w + 3, (ROWS - 7) // 2
+    x0 = (COLS - (text_w + 4 + m_w)) // 2
     for i, ch in enumerate(TEXT):
         for r, row in enumerate(FONT[ch]):
             for c, bit in enumerate(row):
                 if bit == "1":
-                    parts["txt"][(x0 + i * 6 + c, y0 + r)] = t["levels"][rng.randint(1, 3)]
+                    parts["txt"][(x0 + i * 6 + c, r)] = t["levels"][rng.randint(1, 3)]
 
-    mx0, my0 = x0 + text_w + 3, ROWS - len(MASCOT)
+    mx0, my0 = x0 + text_w + 4, ROWS - len(MASCOT)
     for r, row in enumerate(MASCOT):
         for c, v in enumerate(row):
             if v != ".":
-                parts[PART.get(v, "body")][(mx0 + c, my0 + r)] = MASCOT_COLORS[v]
+                color = EYE_COLOR if v == "K" else BODY_COLOR
+                parts[PART.get(v, "body")][(mx0 + c, my0 + r)] = color
     return parts
 
 
@@ -119,22 +87,24 @@ def snake_path():
 
 
 CSS_ANIM = (
-    # spark: pulse + wobble
-    "@keyframes pulse{0%,100%{transform:scale(.88) rotate(-12deg)}50%{transform:scale(1.08) rotate(12deg)}}"
-    ".spark{transform-box:fill-box;transform-origin:center;animation:pulse 1.4s ease-in-out infinite}"
     # text
     "@keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}"
     ".txt{animation:blink 1.6s ease-in-out infinite}"
-    # mascot: bob, tool wiggle, eye blink
-    "@keyframes bob{0%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}"
-    "50%{transform:translateY(0)}62%{transform:translateY(-2px)}74%{transform:translateY(0)}}"
-    ".mascot{animation:bob 1.2s ease-in-out infinite}"
-    "@keyframes wrench{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}"
-    ".wrench{transform-box:fill-box;transform-origin:50% 100%;animation:wrench .6s ease-in-out infinite}"
-    "@keyframes driver{0%,100%{transform:rotate(12deg)}50%{transform:rotate(-12deg)}}"
-    ".driver{transform-box:fill-box;transform-origin:50% 100%;animation:driver .6s ease-in-out infinite .3s}"
-    "@keyframes lid{0%,92%,100%{opacity:0}95%{opacity:1}}"
+    # mascot idle loop: bob, waving arms, stepping legs, blinking eyes
+    "@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}"
+    ".mascot{animation:bob 1s ease-in-out infinite}"
+    "@keyframes larm{0%,100%{transform:translateY(0)}25%{transform:translateY(-6px)}50%{transform:translateY(0)}}"
+    ".larm{animation:larm 1.2s ease-in-out infinite}"
+    ".rarm{animation:larm 1.2s ease-in-out infinite .6s}"
+    "@keyframes step{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}"
+    ".lleg{animation:step .5s ease-in-out infinite}"
+    ".rleg{animation:step .5s ease-in-out infinite .25s}"
+    "@keyframes lid{0%,90%,100%{opacity:0}93%,96%{opacity:1}}"
     ".lid{animation:lid 3s infinite}"
+    # clicking the mascot when the SVG is opened directly: big jump
+    "@keyframes jump{0%{transform:translateY(0)}40%{transform:translateY(-20px) rotate(-6deg)}"
+    "80%{transform:translateY(0) rotate(4deg)}100%{transform:translateY(0)}}"
+    ".hit{cursor:pointer}.hit:active .mascot{animation:jump .45s ease-out infinite}"
 )
 
 
@@ -149,7 +119,7 @@ def render(theme):
 
     gw = COLS * PITCH - GAP + 2 * PAD
     h = ROWS * PITCH - GAP + 2 * PAD
-    w = gw + 2 * ICON_W
+    w = gw + 2 * MARGIN
     cx = lambda x: PAD + x * PITCH
     css = [f"rect.c{{width:{CELL}px;height:{CELL}px;rx:2px;ry:2px}}", CSS_ANIM]
     body = []
@@ -171,8 +141,8 @@ def render(theme):
             out.append(f'<rect class="c" id="{name}" x="{cx(pos[0])}" y="{cx(pos[1])}" fill="{color}"/>')
         return "".join(out)
 
-    body.append(f'<clipPath id="gc"><rect width="{gw}" height="{h}"/></clipPath>')
-    body.append(f'<g transform="translate({ICON_W},0)" clip-path="url(#gc)">')
+    body.append(f'<clipPath id="gc"><rect y="-30" width="{gw}" height="{h + 30}"/></clipPath>')
+    body.append(f'<g transform="translate({MARGIN},0)" clip-path="url(#gc)">')
     body.append(
         "".join(
             f'<rect class="c" x="{cx(x)}" y="{cx(y)}" fill="{t["empty"]}"/>'
@@ -180,23 +150,19 @@ def render(theme):
             for x in range(COLS)
         )
     )
-    body.append(f'<g class="spark">{cells(parts["spark"])}</g>')
     body.append(f'<g class="txt">{cells(parts["txt"])}</g>')
 
-    # mascot: eyelids are body-colored cells over the eyes that flash briefly; hidden once eaten
-    lids = []
-    for pos in sorted(parts["eyes"]):
-        gone = eat_anim(pos, "o")
-        lids.append(
-            f'<g id="{gone}"><rect class="c lid" x="{cx(pos[0])}" y="{cx(pos[1])}" '
-            f'fill="{MASCOT_COLORS["O"]}"/></g>'
-        )
+    # eyelids: body-colored cells over the eyes that flash briefly; hidden once eaten
+    lids = "".join(
+        f'<g id="{eat_anim(pos, "o")}"><rect class="c lid" x="{cx(pos[0])}" y="{cx(pos[1])}" '
+        f'fill="{BODY_COLOR}"/></g>'
+        for pos in sorted(parts["eyes"])
+    )
     body.append(
-        '<g class="mascot">'
-        f'{cells(parts["body"])}{cells(parts["eyes"])}{"".join(lids)}'
-        f'<g class="wrench">{cells(parts["wrench"])}</g>'
-        f'<g class="driver">{cells(parts["driver"])}</g>'
-        "</g>"
+        '<g class="hit"><g class="mascot">'
+        f'{cells(parts["body"])}{cells(parts["eyes"])}{lids}'
+        + "".join(f'<g class="{p}">{cells(parts[p])}</g>' for p in ("larm", "rarm", "lleg", "rleg"))
+        + "</g></g>"
     )
 
     for seg in range(SNAKE_LEN):
@@ -205,7 +171,7 @@ def render(theme):
             px, py = path[max(i - seg, 0)]
             frames.append(f"{pct(i):.3f}%{{transform:translate({px * PITCH}px,{py * PITCH}px)}}")
         css.append(f"@keyframes s{seg}{{{''.join(frames)}}}#s{seg}{{animation:s{seg} {dur:.2f}s linear infinite}}")
-        size = CELL - seg * 1.1
+        size = CELL - seg * 1.2
         off = PAD + (CELL - size) / 2
         body.append(
             f'<rect id="s{seg}" x="{off:.1f}" y="{off:.1f}" width="{size:.1f}" height="{size:.1f}" '
