@@ -9,6 +9,9 @@
   </p>
 
   <p align="center">
+    <a href="mailto:nguyenvanminh859323@gmail.com"><img src="https://img.shields.io/badge/Email-nguyenvanminh859323%40gmail.com-EA4335?style=flat-square&logo=gmail&logoColor=white" alt="Email" /></a>
+    <a href="https://www.linkedin.com/in/nvm21/"><img src="https://img.shields.io/badge/LinkedIn-nvm21-0A66C2?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
+    <a href="https://x.com/Mtobiee"><img src="https://img.shields.io/badge/X-%40Mtobiee-000000?style=flat-square&logo=x&logoColor=white" alt="X" /></a>
     <a href="https://github.com/vminh21"><img src="https://img.shields.io/badge/GitHub-vminh21-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" /></a>
     <img src="https://img.shields.io/badge/Location-Vietnam-009688?style=flat-square&logo=googlemaps&logoColor=white" alt="Location" />
     <img src="https://img.shields.io/badge/Role-AI_Engineer-2563EB?style=flat-square&logo=openai&logoColor=white" alt="Role" />
@@ -142,6 +145,15 @@ I am an **AI Engineer** focused on **Computer Vision, Document AI (OCR), and Gen
 I'm always open to collaborating on **Computer Vision, Document AI, LLM / RAG applications and AI Agents**.
 
 <p align="center">
+  <a href="mailto:nguyenvanminh859323@gmail.com">
+    <img src="https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Gmail" />
+  </a>
+  <a href="https://www.linkedin.com/in/nvm21/">
+    <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
+  </a>
+  <a href="https://x.com/Mtobiee">
+    <img src="https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white" alt="X" />
+  </a>
   <a href="https://github.com/vminh21">
     <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" />
   </a>
