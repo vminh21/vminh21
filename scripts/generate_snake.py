@@ -15,6 +15,7 @@ STEP = 0.07  # seconds per cell
 SNAKE_LEN = 5
 REST_STEPS = 25  # pause with full grid before snake enters
 ICON_W = 120  # space on the left for the bouncing spark icon
+CRITTER_W = 120  # space on the right for the pixel critter
 
 FONT = {
     "V": ["10001", "10001", "10001", "10001", "10001", "01010", "00100"],
@@ -38,12 +39,16 @@ THEMES = {
         "levels": ["#f5cbb8", "#eba287", "#d97757", "#b4532f"],
         "snake": "#2b2a27",
         "spark": "#d97757",
+        "eye": "#1f1e1d",
+        "shadow": "#1f1e1d",
     },
     "dark": {
         "empty": "#161b22",
         "levels": ["#5a2d1c", "#9c4a2e", "#d97757", "#f0a07f"],
         "snake": "#f5f0e8",
         "spark": "#d97757",
+        "eye": "#0d1117",
+        "shadow": "#e6edf3",
     },
 }
 
@@ -102,6 +107,58 @@ def spark_css():
     )
 
 
+CRITTER = [
+    "..XXXXXXX..",
+    "..XEXXXEX..",
+    "XXXXXXXXXXX",
+    "XXXXXXXXXXX",
+    "..XXXXXXX..",
+    "..X.X.X.X..",
+]
+
+
+def critter_svg(t, x0, h):
+    """Small original pixel critter that hops and blinks."""
+    px = 8
+    cw, ch = len(CRITTER[0]) * px, len(CRITTER) * px
+    ox = x0 + (CRITTER_W - cw) / 2 + 2
+    oy = (h - ch) / 2 + 6
+    body, eyes = [], []
+    for r, row in enumerate(CRITTER):
+        for c, v in enumerate(row):
+            if v == ".":
+                continue
+            rect = f'<rect x="{c * px}" y="{r * px}" width="{px}" height="{px}"'
+            if v == "E":
+                eyes.append(rect + f' fill="{t["eye"]}"/>')
+            else:
+                body.append(rect + f' fill="{t["spark"]}"/>')
+    shadow = (
+        f'<ellipse class="shadow" cx="{ox + cw / 2}" cy="{oy + ch + 7}" rx="{cw / 2.4}" ry="3" '
+        f'fill="{t["shadow"]}" opacity=".18"/>'
+    )
+    return (
+        shadow
+        + f'<g transform="translate({ox},{oy})"><g class="hop">'
+        + "".join(body)
+        + f'<g class="eyes">{"".join(eyes)}</g></g></g>'
+    )
+
+
+def critter_css():
+    return (
+        "@keyframes hop{0%,40%,100%{transform:translateY(0)}"
+        "55%{transform:translateY(-16px)}70%{transform:translateY(0)}"
+        "78%{transform:translateY(-5px)}86%{transform:translateY(0)}}"
+        ".hop{animation:hop 1.8s ease-in-out infinite}"
+        "@keyframes eyes{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.15)}}"
+        ".eyes{transform-box:fill-box;transform-origin:center;animation:eyes 3.2s infinite}"
+        "@keyframes shadow{0%,40%,70%,86%,100%{transform:scaleX(1);opacity:.18}"
+        "55%{transform:scaleX(.6);opacity:.08}}"
+        ".shadow{transform-box:fill-box;transform-origin:center;animation:shadow 1.8s ease-in-out infinite}"
+    )
+
+
 def render(theme):
     t = THEMES[theme]
     food = food_cells()
@@ -112,7 +169,7 @@ def render(theme):
 
     gw = COLS * PITCH - GAP + 2 * PAD
     h = ROWS * PITCH - GAP + 2 * PAD
-    w = ICON_W + gw
+    w = ICON_W + gw + CRITTER_W
     css, body = [], []
     css.append(f"rect.c{{width:{CELL}px;height:{CELL}px;rx:2px;ry:2px}}")
     css.append(
@@ -166,6 +223,8 @@ def render(theme):
     body.append("</g>")
     css.append(spark_css())
     body.append(spark_svg(t, h))
+    css.append(critter_css())
+    body.append(critter_svg(t, ICON_W + gw, h))
 
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">'
