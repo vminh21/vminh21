@@ -15,7 +15,6 @@ STEP = 0.07  # seconds per cell
 SNAKE_LEN = 5
 REST_STEPS = 25  # pause with full grid before snake enters
 ICON_W = 120  # space on the left for the bouncing spark icon
-CRITTER_W = 120  # space on the right for the pixel critter
 
 FONT = {
     "V": ["10001", "10001", "10001", "10001", "10001", "01010", "00100"],
@@ -54,16 +53,24 @@ THEMES = {
 
 
 def food_cells():
-    width = len(TEXT) * 6 - 1
-    x0 = (COLS - width) // 2
+    """Return (text cells, critter cells) as {(x, y): level} drawn inside the grid."""
+    text_w = len(TEXT) * 6 - 1
+    crit_w = len(CRITTER[0])
+    x0 = (COLS - (text_w + 3 + crit_w)) // 2
     rng = random.Random(21)
-    food = {}
+    text = {}
     for i, ch in enumerate(TEXT):
         for r, row in enumerate(FONT[ch]):
             for c, bit in enumerate(row):
                 if bit == "1":
-                    food[(x0 + i * 6 + c, r)] = rng.randint(1, 3)
-    return food
+                    text[(x0 + i * 6 + c, r)] = rng.randint(1, 3)
+    cx0, cy0 = x0 + text_w + 3, ROWS - len(CRITTER)
+    critter = {}
+    for r, row in enumerate(CRITTER):
+        for c, v in enumerate(row):
+            if v == "X":
+                critter[(cx0 + c, cy0 + r)] = 2
+    return text, critter
 
 
 def snake_path():
@@ -117,51 +124,19 @@ CRITTER = [
 ]
 
 
-def critter_svg(t, x0, h):
-    """Small original pixel critter that hops and blinks."""
-    px = 8
-    cw, ch = len(CRITTER[0]) * px, len(CRITTER) * px
-    ox = x0 + (CRITTER_W - cw) / 2 + 2
-    oy = (h - ch) / 2 + 6
-    body, eyes = [], []
-    for r, row in enumerate(CRITTER):
-        for c, v in enumerate(row):
-            if v == ".":
-                continue
-            rect = f'<rect x="{c * px}" y="{r * px}" width="{px}" height="{px}"'
-            if v == "E":
-                eyes.append(rect + f' fill="{t["eye"]}"/>')
-            else:
-                body.append(rect + f' fill="{t["spark"]}"/>')
-    shadow = (
-        f'<ellipse class="shadow" cx="{ox + cw / 2}" cy="{oy + ch + 7}" rx="{cw / 2.4}" ry="3" '
-        f'fill="{t["shadow"]}" opacity=".18"/>'
-    )
-    return (
-        shadow
-        + f'<g transform="translate({ox},{oy})"><g class="hop">'
-        + "".join(body)
-        + f'<g class="eyes">{"".join(eyes)}</g></g></g>'
-    )
-
-
 def critter_css():
     return (
-        "@keyframes hop{0%,40%,100%{transform:translateY(0)}"
-        "55%{transform:translateY(-16px)}70%{transform:translateY(0)}"
-        "78%{transform:translateY(-5px)}86%{transform:translateY(0)}}"
+        "@keyframes hop{0%,60%,100%{transform:translateY(0)}"
+        f"70%{{transform:translateY(-{PITCH}px)}}80%{{transform:translateY(0)}}"
+        "87%{transform:translateY(-4px)}93%{transform:translateY(0)}}"
         ".hop{animation:hop 1.8s ease-in-out infinite}"
-        "@keyframes eyes{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.15)}}"
-        ".eyes{transform-box:fill-box;transform-origin:center;animation:eyes 3.2s infinite}"
-        "@keyframes shadow{0%,40%,70%,86%,100%{transform:scaleX(1);opacity:.18}"
-        "55%{transform:scaleX(.6);opacity:.08}}"
-        ".shadow{transform-box:fill-box;transform-origin:center;animation:shadow 1.8s ease-in-out infinite}"
     )
 
 
 def render(theme):
     t = THEMES[theme]
-    food = food_cells()
+    text, critter = food_cells()
+    food = {**text, **critter}
     path = snake_path()
     total_steps = len(path) + REST_STEPS
     dur = total_steps * STEP
@@ -169,7 +144,7 @@ def render(theme):
 
     gw = COLS * PITCH - GAP + 2 * PAD
     h = ROWS * PITCH - GAP + 2 * PAD
-    w = ICON_W + gw + CRITTER_W
+    w = ICON_W + gw + 12
     css, body = [], []
     css.append(f"rect.c{{width:{CELL}px;height:{CELL}px;rx:2px;ry:2px}}")
     css.append(
@@ -196,13 +171,14 @@ def render(theme):
             body.append(
                 f'<rect class="c" x="{PAD + x * PITCH}" y="{PAD + y * PITCH}" fill="{t["empty"]}"/>'
             )
-    body.append('<g class="txt">')
-    for (x, y), lvl in sorted(food.items()):
-        body.append(
-            f'<rect class="c" id="f{x}_{y}" x="{PAD + x * PITCH}" y="{PAD + y * PITCH}" '
-            f'fill="{t["levels"][lvl]}"/>'
-        )
-    body.append("</g>")
+    for cls, cells in (("txt", text), ("hop", critter)):
+        body.append(f'<g class="{cls}">')
+        for (x, y), lvl in sorted(cells.items()):
+            body.append(
+                f'<rect class="c" id="f{x}_{y}" x="{PAD + x * PITCH}" y="{PAD + y * PITCH}" '
+                f'fill="{t["levels"][lvl]}"/>'
+            )
+        body.append("</g>")
 
     for seg in range(SNAKE_LEN):
         frames = []
@@ -224,7 +200,6 @@ def render(theme):
     css.append(spark_css())
     body.append(spark_svg(t, h))
     css.append(critter_css())
-    body.append(critter_svg(t, ICON_W + gw, h))
 
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">'
