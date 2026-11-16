@@ -7,14 +7,14 @@ import random
 from pathlib import Path
 
 TEXT = "CLAUDE"
-COLS, ROWS = 60, 9
+COLS, ROWS = 70, 9
 CELL, GAP = 11, 4
 PITCH = CELL + GAP
 PAD = 6
 STEP = 0.055  # seconds per cell
 SNAKE_LEN = 6
 REST_STEPS = 40  # pause with full grid before snake enters
-ICON_W = 120  # space on the left for the bouncing spark icon
+ICON_W = 12  # left margin
 
 FONT = {
     "C": ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
@@ -24,6 +24,20 @@ FONT = {
     "D": ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
     "E": ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
 }
+
+# Pixel starburst (original, not the official logo): X ray, C core
+SPARK = [
+    "....X....",
+    ".X..X..X.",
+    "..X.X.X..",
+    "...CCC...",
+    "XXXCCCXXX",
+    "...CCC...",
+    "..X.X.X..",
+    ".X..X..X.",
+    "....X....",
+]
+SPARK_COLORS = {"X": "#d97757", "C": "#f0a07f"}
 
 # Builder critter: Y hat, H hat brim, O body, K eye, W smile,
 # G wrench, S screwdriver shaft, P screwdriver handle.
@@ -55,30 +69,37 @@ THEMES = {
         "empty": "#ebedf0",
         "levels": ["#f5cbb8", "#eba287", "#d97757", "#b4532f"],
         "snake": "#2b2a27",
-        "spark": "#d97757",
     },
     "dark": {
         "empty": "#161b22",
         "levels": ["#5a2d1c", "#9c4a2e", "#d97757", "#f0a07f"],
         "snake": "#f5f0e8",
-        "spark": "#d97757",
     },
 }
 
 
 def layout(t):
-    """Return {part: {(x, y): color}} for text and mascot cells inside the grid."""
+    """Return {part: {(x, y): color}} for spark, text and mascot cells inside the grid."""
     text_w = len(TEXT) * 6 - 1
     m_w = len(MASCOT[0])
-    x0 = (COLS - (text_w + 3 + m_w)) // 2
-    y0 = (ROWS - 7) // 2
+    s_w = len(SPARK[0])
     rng = random.Random(21)
-    parts = {"txt": {}, "body": {}, "eyes": {}, "wrench": {}, "driver": {}}
+    parts = {"spark": {}, "txt": {}, "body": {}, "eyes": {}, "wrench": {}, "driver": {}}
+
+    sx0 = (COLS - (s_w + 3 + text_w + 3 + m_w)) // 2
+    sy0 = (ROWS - len(SPARK)) // 2
+    for r, row in enumerate(SPARK):
+        for c, v in enumerate(row):
+            if v != ".":
+                parts["spark"][(sx0 + c, sy0 + r)] = SPARK_COLORS[v]
+
+    x0, y0 = sx0 + s_w + 3, (ROWS - 7) // 2
     for i, ch in enumerate(TEXT):
         for r, row in enumerate(FONT[ch]):
             for c, bit in enumerate(row):
                 if bit == "1":
                     parts["txt"][(x0 + i * 6 + c, y0 + r)] = t["levels"][rng.randint(1, 3)]
+
     mx0, my0 = x0 + text_w + 3, ROWS - len(MASCOT)
     for r, row in enumerate(MASCOT):
         for c, v in enumerate(row):
@@ -97,29 +118,10 @@ def snake_path():
     return path
 
 
-def spark_svg(t, h):
-    """Original orange starburst icon (not the official logo)."""
-    cx, cy = ICON_W / 2 - 4, h / 2
-    lengths = [34, 26, 31, 24, 35, 27, 30, 25, 33, 28, 32, 26]
-    rays = "".join(
-        f'<rect x="-3.5" y="{-L}" width="7" height="{L}" rx="3.5" '
-        f'transform="rotate({i * 360 / len(lengths)})" fill="{t["spark"]}"/>'
-        for i, L in enumerate(lengths)
-    )
-    return (
-        f'<g transform="translate({cx},{cy})"><g class="bounce"><g class="squash">'
-        f'<g class="spin">{rays}<circle r="9" fill="{t["spark"]}"/></g></g></g></g>'
-    )
-
-
 CSS_ANIM = (
-    # spark
-    "@keyframes bounce{0%,100%{transform:translateY(8px)}45%,55%{transform:translateY(-10px)}}"
-    ".bounce{animation:bounce 1.1s cubic-bezier(.45,0,.55,1) infinite}"
-    "@keyframes squash{0%,100%{transform:scale(1.12,.86)}15%,85%{transform:scale(.95,1.06)}50%{transform:scale(1)}}"
-    ".squash{animation:squash 1.1s ease-in-out infinite}"
-    "@keyframes spin{to{transform:rotate(360deg)}}"
-    ".spin{animation:spin 9s linear infinite}"
+    # spark: pulse + wobble
+    "@keyframes pulse{0%,100%{transform:scale(.88) rotate(-12deg)}50%{transform:scale(1.08) rotate(12deg)}}"
+    ".spark{transform-box:fill-box;transform-origin:center;animation:pulse 1.4s ease-in-out infinite}"
     # text
     "@keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}"
     ".txt{animation:blink 1.6s ease-in-out infinite}"
@@ -147,7 +149,7 @@ def render(theme):
 
     gw = COLS * PITCH - GAP + 2 * PAD
     h = ROWS * PITCH - GAP + 2 * PAD
-    w = ICON_W + gw + 12
+    w = gw + 2 * ICON_W
     cx = lambda x: PAD + x * PITCH
     css = [f"rect.c{{width:{CELL}px;height:{CELL}px;rx:2px;ry:2px}}", CSS_ANIM]
     body = []
@@ -178,6 +180,7 @@ def render(theme):
             for x in range(COLS)
         )
     )
+    body.append(f'<g class="spark">{cells(parts["spark"])}</g>')
     body.append(f'<g class="txt">{cells(parts["txt"])}</g>')
 
     # mascot: eyelids are body-colored cells over the eyes that flash briefly; hidden once eaten
@@ -209,7 +212,6 @@ def render(theme):
             f'rx="{min(3.5, size / 2):.1f}" fill="{t["snake"]}" opacity="{1 - seg * 0.12:.2f}"/>'
         )
     body.append("</g>")
-    body.append(spark_svg(t, h))
 
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">'
